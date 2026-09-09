@@ -1,372 +1,230 @@
 # 📝 NoteFlow
 
-> **Capture ideas. Organize thoughts. Get things done.**
+<div align="center">
 
-NoteFlow is a modern, production-quality **Notes Management Web Application** built with **FastAPI**, **MongoDB**, **HTMX**, and **Tailwind CSS**. It demonstrates a clean, full-stack Python architecture suitable for real-world portfolios and software engineering interviews.
+![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi)
+![Python](https://img.shields.io/badge/Python_3.11+-3776AB?style=for-the-badge&logo=python&logoColor=white)
+![MongoDB](https://img.shields.io/badge/MongoDB-4EA94B?style=for-the-badge&logo=mongodb&logoColor=white)
+![HTMX](https://img.shields.io/badge/HTMX-336699?style=for-the-badge&logo=htmx&logoColor=white)
+![TailwindCSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)
+![Tests](https://img.shields.io/badge/Tests-44%20Passing-brightgreen?style=for-the-badge&logo=pytest)
+![License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)
+
+**Capture ideas. Organize thoughts. Get things done.**
+
+*A modern, production-grade Notes Management Web Application and REST API built with FastAPI, Motor (Async MongoDB), HTMX, and Tailwind CSS.*
+
+[Live Demo](#-quick-start) • [Features](#-features) • [Tech Stack](#%EF%B8%8F-tech-stack) • [Architecture](#%EF%B8%8F-architecture) • [API Docs](#-api-documentation) • [Testing](#-running-tests)
+
+</div>
 
 ---
 
 ## ✨ Features
 
-| Feature | Description |
-|---|---|
-| 📋 Dashboard | Responsive card grid with pinned + all notes |
-| ✏️ Create/Edit | Full form with tag preview & character count |
-| 🔍 Real-time Search | HTMX-powered search across title, content, tags |
-| 🗂️ Categories | Personal, Work, Study, Programming, Ideas, Other |
-| 🏷️ Tags | Multi-tag support with badge display |
-| 📌 Pin Notes | Pinned notes float to the top |
-| 🔽 Sort & Filter | Newest, Oldest, Updated, A-Z, Z-A |
-| 🌙 Dark Mode | Persisted in localStorage, smooth transitions |
-| 🔔 Toast Notifications | Success/Error/Info toasts via HTMX triggers |
-| ❌ Confirm Delete | Modal confirmation before deletion |
-| 📱 Responsive | Mobile-first with collapsible sidebar |
-| 📖 API Docs | Auto-generated Swagger at `/docs` and ReDoc at `/redoc` |
-| 🐳 Docker | One-command `docker compose up --build` |
-| 🧪 Tests | pytest async test suite (35+ tests) |
+- 📋 **Responsive Dashboard**: Dynamic note cards grid with pinned and unpinned sections.
+- 📌 **Pin Notes**: Keep your most important notes pinned to the top of your board.
+- 🔍 **Instant Full-Text Search**: HTMX-powered debounced search across title, content, tags, and categories using MongoDB text indexes.
+- 🗂️ **Categorization & Filtering**: Filter notes by categories (*Personal, Work, Study, Programming, Ideas, Other*) and tags.
+- 🏷️ **Multi-Tag System**: Add comma-separated tags with smart sanitization and automatic badges.
+- 🔽 **Multi-field Sorting**: Sort notes by Newest, Oldest, Recently Updated, Alphabetical (A-Z and Z-A).
+- 🌙 **Theme Switcher**: Smooth Light/Dark mode toggle persisted in `localStorage` without unstyled flash.
+- 🔔 **Real-Time Toast Notifications**: Dynamic server-driven notifications powered by `HX-Trigger`.
+- ❌ **Safe Modal Deletion**: Confirmation modals before permanent deletion.
+- 📖 **Self-Documenting API**: Interactive OpenAPI Swagger documentation at `/docs` and ReDoc at `/redoc`.
+- 🐳 **Container Ready**: Complete Docker & Docker Compose setup with health checks.
+- 🧪 **Comprehensive Test Suite**: 44 async tests covering unit, repository, service, and full HTTP endpoints with 100% pass rate.
 
 ---
 
 ## 🛠️ Tech Stack
 
-### Backend
-- **Python 3.11+**
-- **FastAPI** — async web framework
-- **Uvicorn** — ASGI server
-- **Motor** — async MongoDB driver
-- **PyMongo** — MongoDB index creation
-- **Pydantic v2 + pydantic-settings** — data validation & env config
-- **Jinja2** — server-side HTML templating
-
-### Frontend
-- **HTMX** — dynamic interactions without React/Vue
-- **Tailwind CSS** (Play CDN) — utility-first styling
-- **Vanilla JS** (< 150 lines) — dark mode, toasts, sidebar
-
-### Infrastructure
-- **MongoDB 7** — document database
-- **Docker + Docker Compose** — containerization
-- **pytest + pytest-asyncio** — async testing
+| Layer | Technology | Purpose |
+|---|---|---|
+| **Backend Framework** | [FastAPI](https://fastapi.tiangolo.com/) | Modern, high-performance async Python web framework |
+| **ASGI Server** | [Uvicorn](https://www.uvicorn.org/) | Lightning-fast ASGI web server implementation |
+| **Database** | [MongoDB](https://www.mongodb.com/) / Atlas | Scalable document-oriented NoSQL database |
+| **Async DB Driver** | [Motor](https://motor.readthedocs.io/) | Official non-blocking async Python driver for MongoDB |
+| **Data Validation** | [Pydantic v2](https://docs.pydantic.dev/) | Strict data schemas, typing, and environment management |
+| **Templating** | [Jinja2](https://palletsprojects.com/p/jinja/) | Expressive server-side HTML templating |
+| **Frontend Interactivity** | [HTMX](https://htmx.org/) | High-power AJAX, CSS transitions, and WebSockets directly in HTML |
+| **Styling** | [Tailwind CSS](https://tailwindcss.com/) | Modern utility-first responsive styling with dark mode |
+| **Testing** | [pytest](https://pytest.org/) + [pytest-asyncio](https://pytest-asyncio.readthedocs.io/) | Full asynchronous test harness and fixtures |
 
 ---
 
 ## 🏗️ Architecture
 
+NoteFlow follows the **Repository & Service Layer Pattern** for clean separation of concerns:
+
 ```
 noteflow/
-│
 ├── app/
-│   ├── main.py              # FastAPI app factory, lifespan, middleware, routers
-│   ├── config.py            # Pydantic Settings (loads .env)
-│   ├── database.py          # Motor async client, indexes, connection management
-│   │
+│   ├── config.py              # Pydantic Settings & environment variables
+│   ├── database.py            # Motor async client, indexing, and connection lifecycle
+│   ├── main.py                # FastAPI app factory, lifespan, error handlers
 │   ├── models/
-│   │   └── note.py          # MongoDB document model with PyObjectId
-│   │
+│   │   └── note.py            # MongoDB ODM Document models with PyObjectId
 │   ├── schemas/
-│   │   └── note.py          # Pydantic v2 request/response schemas
-│   │
+│   │   └── note.py            # Pydantic v2 request & response schemas
 │   ├── repositories/
-│   │   └── note_repository.py   # Raw async MongoDB operations (CRUD, search, aggregation)
-│   │
+│   │   └── note_repository.py # Async MongoDB CRUD, search filters, aggregations
 │   ├── services/
-│   │   └── note_service.py      # Business logic layer (orchestrates repository)
-│   │
+│   │   └── note_service.py    # Business logic layer (validation, stats calculation)
 │   ├── routers/
 │   │   ├── api/
-│   │   │   └── notes.py     # REST API endpoints (JSON)
-│   │   ├── pages.py         # Full-page Jinja2 routes
-│   │   └── htmx.py          # HTMX partial routes (HTML fragments)
-│   │
-│   ├── templates/
+│   │   │   └── notes.py       # REST API endpoints (JSON responses)
+│   │   ├── htmx.py            # HTMX partial routes (HTML fragments)
+│   │   └── pages.py           # Full-page Jinja2 routes
+│   ├── templates/             # Jinja2 HTML templates & HTMX partials
 │   │   ├── base.html
 │   │   ├── dashboard.html
-│   │   ├── note_detail.html
 │   │   ├── note_form.html
-│   │   ├── error.html
 │   │   └── partials/
-│   │       ├── note_card.html
-│   │       ├── notes_list.html
-│   │       ├── confirm_delete.html
-│   │       ├── note_detail_modal.html
-│   │       ├── sidebar_stats.html
-│   │       └── toast.html
-│   │
-│   └── static/
-│       ├── css/custom.css
-│       └── js/app.js
-│
+│   └── static/                # CSS styles and JavaScript helpers
 ├── tests/
-│   ├── conftest.py
-│   ├── test_notes.py
-│   └── test_pages.py
-│
-├── Dockerfile
-├── docker-compose.yml
-├── requirements.txt
-├── pytest.ini
-├── .env.example
-├── .gitignore
+│   ├── conftest.py            # Pytest fixtures & isolated test DB setup
+│   ├── test_notes.py          # CRUD, search, filter, and validation tests
+│   └── test_pages.py          # Page and HTMX route integration tests
+├── Dockerfile                 # Container image specification
+├── docker-compose.yml         # Multi-container orchestration (App + Mongo)
+├── requirements.txt           # Production dependencies
+├── pytest.ini                 # Pytest configuration
+├── run.ps1                    # One-click Windows PowerShell launcher
 └── README.md
 ```
 
 ---
 
-## 🍃 MongoDB Schema
+## 🚀 Quick Start
 
-**Database:** `notes_db`  
-**Collection:** `notes`
-
-```json
-{
-  "_id":        "ObjectId",
-  "title":      "String (required, max 200)",
-  "content":    "String (required, max 50000)",
-  "category":   "String (enum: Personal|Work|Study|Programming|Ideas|Other)",
-  "tags":       "[String] (max 20 tags, each max 50 chars)",
-  "is_pinned":  "Boolean (default: false)",
-  "created_at": "DateTime (UTC)",
-  "updated_at": "DateTime (UTC)"
-}
-```
-
-### Indexes
-
-| Index | Type | Purpose |
-|---|---|---|
-| `created_at` | Descending | Newest-first sorting |
-| `updated_at` | Descending | Recently updated sorting |
-| `category` | Ascending | Category filtering |
-| `tags` | Ascending | Tag filtering |
-| `is_pinned` | Descending | Pinned filter |
-| `title + content + tags + category` | **Text** | Full-text search |
-
----
-
-## 🌐 API Endpoints
-
-### Notes API (`/api/notes`)
-
-| Method | Path | Description |
-|---|---|---|
-| `GET` | `/api/notes` | List notes (search, filter, sort, paginate) |
-| `GET` | `/api/notes/{id}` | Get single note |
-| `POST` | `/api/notes` | Create note |
-| `PUT` | `/api/notes/{id}` | Update note |
-| `DELETE` | `/api/notes/{id}` | Delete note |
-| `PATCH` | `/api/notes/{id}/pin` | Toggle pin |
-| `GET` | `/api/notes/search?q=` | Full-text search |
-| `GET` | `/api/notes/category/{cat}` | Filter by category |
-| `GET` | `/api/notes/categories` | List categories |
-
-### Query Parameters for `GET /api/notes`
-
-| Param | Type | Description |
-|---|---|---|
-| `q` | string | Full-text search query |
-| `category` | string | Filter by category |
-| `tag` | string | Filter by tag |
-| `is_pinned` | bool | Filter pinned notes |
-| `sort` | string | `newest\|oldest\|updated\|alpha_asc\|alpha_desc` |
-| `page` | int | Page number (default: 1) |
-| `page_size` | int | Items per page (default: 20, max: 100) |
-
-### Page Routes
-
-| Method | Path | Description |
-|---|---|---|
-| `GET` | `/` | Dashboard |
-| `GET` | `/notes/create` | Create note form |
-| `GET` | `/notes/{id}` | Note detail page |
-| `GET` | `/notes/{id}/edit` | Edit note form |
-
-### HTMX Partial Routes (`/htmx`)
-
-| Method | Path | Returns |
-|---|---|---|
-| `GET` | `/htmx/notes` | Notes grid partial |
-| `POST` | `/htmx/notes` | Create + return updated grid |
-| `PUT` | `/htmx/notes/{id}` | Update + return note card |
-| `DELETE` | `/htmx/notes/{id}` | Delete + empty response |
-| `PATCH` | `/htmx/notes/{id}/pin` | Pin toggle + return card |
-| `GET` | `/htmx/search` | Search results partial |
-| `GET` | `/htmx/notes/{id}/detail` | Note detail modal |
-| `GET` | `/htmx/notes/{id}/confirm-delete` | Delete confirmation modal |
-
----
-
-## ⚙️ Environment Variables
+### 1. Clone the Repository
 
 ```bash
-# .env
-MONGODB_URL=mongodb://localhost:27017    # MongoDB connection string
-DATABASE_NAME=notes_db                  # Database name
-APP_ENV=development                     # development | production
-SECRET_KEY=change-this-in-production    # App secret key
+git clone https://github.com/RajatPatelHBTU/NoteFlow.git
+cd NoteFlow
 ```
 
----
+### 2. Create and Activate a Virtual Environment
 
-## 🚀 Local Setup
-
-### Prerequisites
-- Python 3.11+
-- MongoDB running locally (or use Docker)
-
-### 1. Clone the repository
-
-```bash
-git clone https://github.com/yourusername/noteflow.git
-cd noteflow
-```
-
-### 2. Create virtual environment
-
-```bash
+**Windows (PowerShell):**
+```powershell
 python -m venv venv
+.\venv\Scripts\Activate.ps1
+```
 
-# Windows
-venv\Scripts\activate
-
-# macOS / Linux
+**macOS / Linux:**
+```bash
+python3 -m venv venv
 source venv/bin/activate
 ```
 
-### 3. Install dependencies
+### 3. Install Dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 4. Configure environment
+### 4. Configure Environment Variables
+
+Copy `.env.example` to `.env` and fill in your MongoDB connection details:
 
 ```bash
 cp .env.example .env
-# Edit .env with your settings
 ```
 
-### 5. Start MongoDB (if not already running)
+Example configuration (`.env`):
+```env
+MONGODB_URL=mongodb+srv://<username>:<password>@cluster0.mongodb.net/?appName=Cluster0
+DATABASE_NAME=Notes
+APP_ENV=development
+SECRET_KEY=your-secret-key-here
+```
 
+### 5. Run the Application
+
+**Using the Windows Launcher Script:**
+```powershell
+.\run.ps1
+```
+
+**Or directly with Uvicorn:**
 ```bash
-# Using Docker (simplest):
-docker run -d -p 27017:27017 --name mongo mongo:7.0
-
-# Or install MongoDB locally: https://www.mongodb.com/docs/manual/installation/
+uvicorn app.main:app --reload --port 8000
 ```
 
-### 6. Run the application
-
-```bash
-uvicorn app.main:app --reload
-```
-
-Visit: **http://localhost:8000**
-
-API docs: **http://localhost:8000/docs**
+Open your browser and visit:
+- **Web App**: [http://127.0.0.1:8000](http://127.0.0.1:8000)
+- **Swagger UI Docs**: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
+- **ReDoc**: [http://127.0.0.1:8000/redoc](http://127.0.0.1:8000/redoc)
 
 ---
 
-## 🐳 Docker Setup
+## 🐳 Docker Deployment
 
-> Runs the full stack (FastAPI + MongoDB) with a single command.
+Run the complete application stack including MongoDB with a single command:
 
 ```bash
-# Build and start
+# Build and run containers
 docker compose up --build
 
-# Run in background
+# Run in detached background mode
 docker compose up -d --build
 
-# Stop
+# Stop the application
 docker compose down
-
-# Stop and remove volumes (clears all data)
-docker compose down -v
 ```
-
-Visit: **http://localhost:8000**
 
 ---
 
 ## 🧪 Running Tests
 
+The test suite runs against an isolated test database with automatic cleanup:
+
 ```bash
-# Ensure MongoDB is running (tests use a separate 'noteflow_test_db')
-# then:
+# Run all tests
+pytest
 
-pytest tests/ -v
+# Run tests with verbose output
+pytest -v
 
-# Run specific file
+# Run specific test modules
 pytest tests/test_notes.py -v
-
-# Run with coverage
-pip install pytest-cov
-pytest tests/ --cov=app --cov-report=term-missing
+pytest tests/test_pages.py -v
 ```
 
-> **Note:** Tests require a live MongoDB instance. The test suite uses `noteflow_test_db` and cleans up after each test.
+**Test Coverage Summary:**
+- ✅ Note Creation, Validation, and Character Limits
+- ✅ Note Updating, Deletion, and Pinning
+- ✅ Full-Text Search and Category/Tag Filtering
+- ✅ Error Handling (404 Not Found, 422 Unprocessable Content)
+- ✅ HTMX and Full Page Template Rendering
+- **44 Passed out of 44 tests**
 
 ---
 
-## 📸 Screenshots
+## 🌐 API Documentation
 
-*Add screenshots of your running application here.*
-
-| Dashboard | Create Note | Dark Mode |
+| Method | Endpoint | Description |
 |---|---|---|
-| `screenshot-dashboard.png` | `screenshot-create.png` | `screenshot-dark.png` |
-
----
-
-## 🔮 Future Improvements
-
-- [ ] User authentication (JWT / OAuth2)
-- [ ] Note sharing with public links
-- [ ] Markdown rendering in note content
-- [ ] Rich text editor (Quill / TipTap)
-- [ ] File/image attachments
-- [ ] Export notes as PDF / Markdown
-- [ ] Note templates
-- [ ] Collaborative notes (WebSocket)
-- [ ] Mobile PWA support
-- [ ] Full Tailwind CLI build (remove Play CDN for production)
-- [ ] Redis caching for search results
-- [ ] CI/CD with GitHub Actions
-
----
-
-## 🎤 Interview Questions
-
-**Q: Why FastAPI over Flask/Django?**
-> FastAPI is async-native, has automatic OpenAPI docs generation, uses Pydantic for validation, and is significantly faster due to Starlette/ASGI. For a notes app with async MongoDB operations, it's the natural choice.
-
-**Q: Why Motor instead of PyMongo?**
-> Motor is the async version of PyMongo built for asyncio. Since FastAPI uses async/await, using Motor allows non-blocking database calls, enabling FastAPI to handle many concurrent requests efficiently.
-
-**Q: How does HTMX work here?**
-> Instead of a separate React SPA, HTMX intercepts user actions (clicks, form submits, input events) and makes fetch requests to the server. The server returns HTML fragments (partials) rather than JSON. HTMX then swaps these fragments into the DOM — giving SPA-like interactivity with server-side simplicity.
-
-**Q: How does search work?**
-> MongoDB text indexes are created on `title`, `content`, `tags`, and `category` with different weights (title=10, tags=5, category=3, content=1). When the user types in the search box, HTMX fires a debounced GET request to `/htmx/search?q=...`. The server runs a `$text` search query and returns an updated notes grid HTML partial.
-
-**Q: How is dark mode implemented?**
-> Dark mode uses Tailwind's `class` strategy. On page load, a blocking script checks `localStorage.getItem('theme')` and adds `class="dark"` to `<html>` if needed — preventing any flash of unstyled content. Toggling calls `toggleDarkMode()` which adds/removes the class and saves to localStorage.
-
-**Q: What is the repository pattern and why use it?**
-> The repository pattern abstracts all database operations into a single class (`NoteRepository`). The service layer (`NoteService`) contains business logic and calls the repository. This separation makes testing easier (mock the repository), enables database swapping, and keeps route handlers thin.
-
-**Q: How does pagination work?**
-> Pagination uses `skip()` and `limit()` in MongoDB queries. The API accepts `page` and `page_size` parameters. The service calculates `total_pages`, `has_next`, and `has_prev` for the response. The frontend renders pagination buttons that use HTMX to load the next page without full reload.
-
-**Q: How are toast notifications triggered?**
-> The HTMX router sets a custom `HX-Trigger` response header with JSON: `{"showToast": {"message": "...", "type": "success"}}`. HTMX fires this as a DOM event, which `app.js` listens for via `document.addEventListener('showToast', ...)` and creates a styled toast element.
+| `GET` | `/api/notes` | List notes (supports `q`, `category`, `tag`, `sort`, `page`, `page_size`) |
+| `POST` | `/api/notes` | Create a new note |
+| `GET` | `/api/notes/{id}` | Get note details by ID |
+| `PUT` | `/api/notes/{id}` | Update existing note |
+| `DELETE` | `/api/notes/{id}` | Delete a note |
+| `PATCH` | `/api/notes/{id}/pin` | Toggle pin status of a note |
+| `GET` | `/api/notes/categories` | Retrieve all active categories |
+| `GET` | `/api/notes/category/{category}` | Filter notes by category |
+| `GET` | `/api/notes/search?q={query}` | Execute full-text search |
 
 ---
 
 ## 📄 License
 
-MIT License — free to use for learning, portfolio, and commercial projects.
+This project is licensed under the **MIT License** — feel free to use it for personal projects, portfolios, or commercial applications.
 
 ---
 
-*Built with ❤️ using FastAPI, MongoDB, HTMX, and Tailwind CSS.*
+<div align="center">
+  Developed by <a href="https://github.com/RajatPatelHBTU">Rajat Patel</a>
+</div>
