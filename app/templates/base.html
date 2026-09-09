@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="NoteFlow — Capture ideas. Organize thoughts. Get things done." />
+  <title>{% block title %}NoteFlow{% endblock %}</title>
+
+  <!-- Tailwind CSS Play CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            primary: {
+              50:  '#f0f4ff',
+              100: '#e0eaff',
+              200: '#c7d7fe',
+              300: '#a5b8fd',
+              400: '#818ef9',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca',
+              800: '#3730a3',
+              900: '#312e81',
+            },
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+          },
+          animation: {
+            'fade-in': 'fadeIn 0.3s ease-out',
+            'slide-up': 'slideUp 0.3s ease-out',
+            'slide-in-right': 'slideInRight 0.3s ease-out',
+          },
+          keyframes: {
+            fadeIn: { '0%': { opacity: '0' }, '100%': { opacity: '1' } },
+            slideUp: { '0%': { opacity: '0', transform: 'translateY(10px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } },
+            slideInRight: { '0%': { opacity: '0', transform: 'translateX(20px)' }, '100%': { opacity: '1', transform: 'translateX(0)' } },
+          },
+        },
+      },
+    }
+  </script>
+
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+
+  <!-- HTMX -->
+  <script src="/static/js/htmx.min.js"></script>
+
+
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="/static/css/custom.css" />
+
+  <!-- Dark mode init (before render to prevent flash) -->
+  <script>
+    (function () {
+      const theme = localStorage.getItem('theme') || 'light';
+      if (theme === 'dark') document.documentElement.classList.add('dark');
+    })();
+  </script>
+</head>
+
+<body class="h-full bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 font-sans transition-colors duration-300" hx-boost="false">
+
+  <!-- ── Toast Container ─────────────────────────────────────────────────── -->
+  <div id="toast-container"
+       class="fixed top-4 right-4 z-50 flex flex-col gap-2 pointer-events-none"
+       aria-live="polite"
+       aria-label="Notifications">
+  </div>
+
+  <!-- ── Delete Confirmation Modal Container ─────────────────────────────── -->
+  <div id="modal-container"></div>
+
+  <!-- ── Mobile Sidebar Overlay ─────────────────────────────────────────── -->
+  <div id="sidebar-overlay"
+       class="fixed inset-0 z-20 bg-black/50 hidden lg:hidden"
+       onclick="closeSidebar()"></div>
+
+  <!-- ── Layout ─────────────────────────────────────────────────────────── -->
+  <div class="flex h-full">
+
+    <!-- Sidebar -->
+    <aside id="sidebar"
+           class="fixed lg:static inset-y-0 left-0 z-30 w-64 flex-shrink-0
+                  bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700
+                  flex flex-col transform -translate-x-full lg:translate-x-0
+                  transition-transform duration-300 ease-in-out shadow-xl lg:shadow-none">
+
+      <!-- Logo -->
+      <div class="px-5 py-5 border-b border-slate-200 dark:border-slate-700">
+        <a href="/" class="flex items-center gap-3 group">
+          <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-primary-500 to-primary-700
+                      flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform">
+            <svg class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586
+                       a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+          </div>
+          <div>
+            <span class="text-lg font-bold text-slate-900 dark:text-white">NoteFlow</span>
+            <p class="text-xs text-slate-400 dark:text-slate-500 leading-none">Notes Manager</p>
+          </div>
+        </a>
+      </div>
+
+      <!-- Navigation -->
+      <nav class="flex-1 overflow-y-auto px-3 py-4 space-y-1">
+
+        <!-- All Notes -->
+        <a href="/"
+           class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium
+                  hover:bg-primary-50 dark:hover:bg-primary-900/30 hover:text-primary-600 dark:hover:text-primary-400
+                  transition-colors duration-150 {% if request.url.path == '/' and not request.query_params.get('is_pinned') and not request.query_params.get('category') %}
+                  bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 {% else %} text-slate-600 dark:text-slate-300 {% endif %}">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+          </svg>
+          All Notes
+          <span id="sidebar-total-count"
+                class="ml-auto bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400
+                       text-xs px-2 py-0.5 rounded-full font-medium">
+            {% if stats %}{{ stats.total }}{% else %}0{% endif %}
+          </span>
+        </a>
+
+        <!-- Pinned Notes -->
+        <a href="/?is_pinned=true"
+           hx-get="/htmx/notes?is_pinned=true"
+           hx-target="#notes-grid-container"
+           hx-push-url="/?is_pinned=true"
+           class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium
+                  text-slate-600 dark:text-slate-300 hover:bg-amber-50 dark:hover:bg-amber-900/20
+                  hover:text-amber-600 dark:hover:text-amber-400 transition-colors duration-150">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+          </svg>
+          Pinned
+          <span id="sidebar-pinned-count"
+                class="ml-auto bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400
+                       text-xs px-2 py-0.5 rounded-full font-medium">
+            {% if stats %}{{ stats.pinned_count }}{% else %}0{% endif %}
+          </span>
+        </a>
+
+        <!-- Categories Section -->
+        <div class="pt-4 pb-1 px-3">
+          <p class="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Categories</p>
+        </div>
+
+        {% set cat_icons = {
+          'Personal': 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z',
+          'Work': 'M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z',
+          'Study': 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253',
+          'Programming': 'M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4',
+          'Ideas': 'M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z',
+          'Other': 'M5 12h.01M12 12h.01M19 12h.01M6 12a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0z',
+        } %}
+        {% set cat_colors = {
+          'Personal': 'text-pink-500 bg-pink-50 dark:bg-pink-900/20',
+          'Work': 'text-blue-500 bg-blue-50 dark:bg-blue-900/20',
+          'Study': 'text-green-500 bg-green-50 dark:bg-green-900/20',
+          'Programming': 'text-purple-500 bg-purple-50 dark:bg-purple-900/20',
+          'Ideas': 'text-amber-500 bg-amber-50 dark:bg-amber-900/20',
+          'Other': 'text-slate-500 bg-slate-100 dark:bg-slate-700',
+        } %}
+
+        {% for category in categories %}
+        {% set active_cat = request.query_params.get('category') == category %}
+        <a href="/?category={{ category }}"
+           hx-get="/htmx/notes?category={{ category }}"
+           hx-target="#notes-grid-container"
+           hx-push-url="/?category={{ category }}"
+           class="sidebar-link flex items-center gap-3 px-3 py-2 rounded-lg text-sm
+                  text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50
+                  transition-colors duration-150 {% if active_cat %}bg-slate-50 dark:bg-slate-700/50 font-medium{% endif %}">
+          <span class="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 {{ cat_colors.get(category, 'text-slate-500 bg-slate-100 dark:bg-slate-700') }}">
+            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="{{ cat_icons.get(category, cat_icons['Other']) }}" />
+            </svg>
+          </span>
+          {{ category }}
+          {% if stats %}
+          {% set cat_count = namespace(val=0) %}
+          {% for cc in stats.category_counts %}
+            {% if cc.category == category %}{% set cat_count.val = cc.count %}{% endif %}
+          {% endfor %}
+          {% if cat_count.val > 0 %}
+          <span class="ml-auto text-xs text-slate-400 dark:text-slate-500 font-medium">{{ cat_count.val }}</span>
+          {% endif %}
+          {% endif %}
+        </a>
+        {% endfor %}
+
+        <!-- Tags Section -->
+        {% if stats and stats.tags %}
+        <div class="pt-4 pb-1 px-3">
+          <p class="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Tags</p>
+        </div>
+        <div class="px-3 flex flex-wrap gap-1.5">
+          {% for tag in stats.tags[:12] %}
+          <a href="/?tag={{ tag }}"
+             hx-get="/htmx/notes?tag={{ tag }}"
+             hx-target="#notes-grid-container"
+             hx-push-url="/?tag={{ tag }}"
+             class="text-xs px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-700
+                    text-slate-600 dark:text-slate-300 hover:bg-primary-100 dark:hover:bg-primary-900/30
+                    hover:text-primary-600 dark:hover:text-primary-400 transition-colors cursor-pointer">
+            #{{ tag }}
+          </a>
+          {% endfor %}
+        </div>
+        {% endif %}
+
+      </nav>
+
+      <!-- Sidebar Footer — Create Note CTA -->
+      <div class="p-4 border-t border-slate-200 dark:border-slate-700">
+        <a href="/notes/create"
+           class="flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-xl
+                  bg-gradient-to-r from-primary-600 to-primary-500 hover:from-primary-700 hover:to-primary-600
+                  text-white text-sm font-semibold shadow-md hover:shadow-lg
+                  transition-all duration-200 group">
+          <svg class="w-4 h-4 group-hover:rotate-90 transition-transform duration-200"
+               fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+          </svg>
+          New Note
+        </a>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <div class="flex-1 flex flex-col min-h-0 overflow-hidden">
+
+      <!-- ── Top Header ─────────────────────────────────────────────────── -->
+      <header class="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700
+                     px-4 sm:px-6 py-3 flex items-center gap-4 sticky top-0 z-10 flex-shrink-0">
+
+        <!-- Mobile menu button -->
+        <button onclick="openSidebar()"
+                class="lg:hidden p-2 rounded-lg text-slate-500 hover:text-slate-700 dark:text-slate-400
+                       dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+                aria-label="Open sidebar">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+
+        <!-- Search Bar -->
+        <div class="flex-1 max-w-xl">
+          <div class="relative">
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <svg class="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0" />
+              </svg>
+            </div>
+            <input id="search-input"
+                   type="search"
+                   name="q"
+                   placeholder="Search notes…"
+                   value="{% block search_value %}{% endblock %}"
+                   hx-get="/htmx/search"
+                   hx-trigger="input changed delay:300ms, search"
+                   hx-target="#notes-grid-container"
+                   hx-include="#category-filter, #sort-select, #tag-filter"
+                   hx-push-url="true"
+                   autocomplete="off"
+                   class="w-full pl-10 pr-4 py-2.5 text-sm bg-slate-50 dark:bg-slate-700/50
+                          border border-slate-200 dark:border-slate-600 rounded-xl
+                          text-slate-700 dark:text-slate-200 placeholder-slate-400
+                          focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500
+                          dark:focus:border-primary-400 transition-all duration-200" />
+          </div>
+        </div>
+
+        <!-- Sort Select -->
+        <div class="hidden sm:block">
+          <select id="sort-select"
+                  name="sort"
+                  hx-get="/htmx/notes"
+                  hx-trigger="change"
+                  hx-target="#notes-grid-container"
+                  hx-include="#search-input, #category-filter, #tag-filter"
+                  hx-push-url="true"
+                  class="text-sm px-3 py-2.5 bg-slate-50 dark:bg-slate-700/50 border border-slate-200
+                         dark:border-slate-600 rounded-xl text-slate-700 dark:text-slate-200
+                         focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500
+                         dark:focus:border-primary-400 cursor-pointer transition-all">
+            <option value="newest" {% block sort_newest %}{% endblock %}>Newest</option>
+            <option value="oldest" {% block sort_oldest %}{% endblock %}>Oldest</option>
+            <option value="updated" {% block sort_updated %}{% endblock %}>Recently Updated</option>
+            <option value="alpha_asc" {% block sort_alpha_asc %}{% endblock %}>A → Z</option>
+            <option value="alpha_desc" {% block sort_alpha_desc %}{% endblock %}>Z → A</option>
+          </select>
+        </div>
+
+        <!-- Hidden filter inputs (for HTMX includes) -->
+        <input type="hidden" id="category-filter" name="category" value="{% block cat_filter_value %}{% endblock %}" />
+        <input type="hidden" id="tag-filter" name="tag" value="{% block tag_filter_value %}{% endblock %}" />
+
+        <!-- Dark Mode Toggle -->
+        <button id="dark-mode-toggle"
+                onclick="toggleDarkMode()"
+                class="p-2.5 rounded-xl text-slate-500 dark:text-slate-400
+                       hover:bg-slate-100 dark:hover:bg-slate-700
+                       hover:text-slate-700 dark:hover:text-slate-200
+                       transition-colors duration-200"
+                aria-label="Toggle dark mode">
+          <!-- Sun icon (shown in dark mode) -->
+          <svg class="w-5 h-5 hidden dark:block" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707
+                     m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+          </svg>
+          <!-- Moon icon (shown in light mode) -->
+          <svg class="w-5 h-5 block dark:hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+          </svg>
+        </button>
+
+        <!-- Create Note Button (header) -->
+        <a href="/notes/create"
+           class="hidden sm:flex items-center gap-2 px-4 py-2 rounded-xl
+                  bg-primary-600 hover:bg-primary-700 dark:bg-primary-500 dark:hover:bg-primary-600
+                  text-white text-sm font-semibold shadow-sm hover:shadow-md
+                  transition-all duration-200 group">
+          <svg class="w-4 h-4 group-hover:rotate-90 transition-transform duration-200"
+               fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+          </svg>
+          <span>New Note</span>
+        </a>
+      </header>
+
+      <!-- ── Page Content ─────────────────────────────────────────────── -->
+      <main class="flex-1 overflow-y-auto px-4 sm:px-6 py-6">
+        {% block content %}{% endblock %}
+      </main>
+    </div>
+  </div>
+
+  <!-- ── JavaScript ─────────────────────────────────────────────────────── -->
+  <script src="/static/js/app.js"></script>
+</body>
+</html>

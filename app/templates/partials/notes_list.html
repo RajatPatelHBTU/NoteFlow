@@ -1,0 +1,159 @@
+<!-- Notes List Partial — rendered by both HTMX and page routes -->
+{% if notes_page.notes %}
+
+  <!-- Pinned Section (if there are pinned notes in view) -->
+  {% set pinned_notes = notes_page.notes | selectattr("is_pinned") | list %}
+  {% set unpinned_notes = notes_page.notes | rejectattr("is_pinned") | list %}
+
+  {% if pinned_notes and not current_pinned %}
+  <div class="mb-6">
+    <div class="flex items-center gap-2 mb-3">
+      <svg class="w-4 h-4 text-amber-500" fill="currentColor" viewBox="0 0 20 20">
+        <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" />
+      </svg>
+      <h2 class="text-sm font-semibold text-amber-600 dark:text-amber-400 uppercase tracking-wide">Pinned</h2>
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+      {% for note in pinned_notes %}
+        {% include "partials/note_card.html" %}
+      {% endfor %}
+    </div>
+  </div>
+
+  {% if unpinned_notes %}
+  <div class="flex items-center gap-2 mb-3">
+    <div class="h-px flex-1 bg-slate-200 dark:bg-slate-700"></div>
+    <span class="text-xs font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wide px-2">Other notes</span>
+    <div class="h-px flex-1 bg-slate-200 dark:bg-slate-700"></div>
+  </div>
+  <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+    {% for note in unpinned_notes %}
+      {% include "partials/note_card.html" %}
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% else %}
+  <!-- No pinned or all pinned filtered — show flat grid -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+    {% for note in notes_page.notes %}
+      {% include "partials/note_card.html" %}
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- Pagination -->
+  {% if notes_page.total_pages > 1 %}
+  <div class="mt-8 flex items-center justify-center gap-2">
+    {% if notes_page.has_prev %}
+    <button hx-get="/htmx/notes?page={{ notes_page.page - 1 }}&q={{ current_q }}&category={{ current_category }}&tag={{ current_tag }}&sort={{ current_sort }}"
+            hx-target="#notes-grid-container"
+            hx-push-url="true"
+            class="px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-300
+                   bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700
+                   rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700
+                   hover:border-primary-300 dark:hover:border-primary-600
+                   transition-all duration-150">
+      ← Previous
+    </button>
+    {% endif %}
+
+    <div class="flex items-center gap-1">
+      {% for p in range(1, notes_page.total_pages + 1) %}
+      {% if p == notes_page.page %}
+      <span class="w-9 h-9 flex items-center justify-center text-sm font-semibold rounded-xl
+                   bg-primary-600 text-white shadow-sm">{{ p }}</span>
+      {% elif (p - notes_page.page)|abs <= 2 %}
+      <button hx-get="/htmx/notes?page={{ p }}&q={{ current_q }}&category={{ current_category }}&tag={{ current_tag }}&sort={{ current_sort }}"
+              hx-target="#notes-grid-container"
+              hx-push-url="true"
+              class="w-9 h-9 flex items-center justify-center text-sm font-medium rounded-xl
+                     text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700
+                     transition-colors">
+        {{ p }}
+      </button>
+      {% elif p == 1 or p == notes_page.total_pages %}
+      <button hx-get="/htmx/notes?page={{ p }}&q={{ current_q }}&category={{ current_category }}&tag={{ current_tag }}&sort={{ current_sort }}"
+              hx-target="#notes-grid-container"
+              hx-push-url="true"
+              class="w-9 h-9 flex items-center justify-center text-sm font-medium rounded-xl
+                     text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700
+                     transition-colors">
+        {{ p }}
+      </button>
+      {% endif %}
+      {% endfor %}
+    </div>
+
+    {% if notes_page.has_next %}
+    <button hx-get="/htmx/notes?page={{ notes_page.page + 1 }}&q={{ current_q }}&category={{ current_category }}&tag={{ current_tag }}&sort={{ current_sort }}"
+            hx-target="#notes-grid-container"
+            hx-push-url="true"
+            class="px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-300
+                   bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700
+                   rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700
+                   hover:border-primary-300 dark:hover:border-primary-600
+                   transition-all duration-150">
+      Next →
+    </button>
+    {% endif %}
+  </div>
+  {% endif %}
+
+{% else %}
+<!-- ── Empty State ─────────────────────────────────────────────────────── -->
+<div class="flex flex-col items-center justify-center py-24 text-center animate-fade-in">
+  <div class="w-24 h-24 mb-6 rounded-3xl bg-gradient-to-br from-primary-100 to-primary-200
+              dark:from-primary-900/40 dark:to-primary-800/40
+              flex items-center justify-center shadow-inner">
+    <svg class="w-12 h-12 text-primary-400 dark:text-primary-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+      <path stroke-linecap="round" stroke-linejoin="round"
+            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586
+               a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+    </svg>
+  </div>
+  <h2 class="text-xl font-bold text-slate-700 dark:text-slate-200 mb-2">
+    {% if current_q or current_category or current_tag or current_pinned %}
+      No notes found
+    {% else %}
+      No notes yet
+    {% endif %}
+  </h2>
+  <p class="text-slate-400 dark:text-slate-500 max-w-sm mb-8 text-sm leading-relaxed">
+    {% if current_q %}
+      No notes match "<strong>{{ current_q }}</strong>". Try a different search term.
+    {% elif current_category %}
+      No notes in the <strong>{{ current_category }}</strong> category yet.
+    {% elif current_tag %}
+      No notes tagged with <strong>#{{ current_tag }}</strong>.
+    {% elif current_pinned %}
+      You haven't pinned any notes yet.
+    {% else %}
+      Create your first note and start organizing your ideas. Your thoughts deserve a great home.
+    {% endif %}
+  </p>
+  {% if not current_q and not current_category and not current_tag %}
+  <a href="/notes/create"
+     class="inline-flex items-center gap-2 px-6 py-3 rounded-xl
+            bg-gradient-to-r from-primary-600 to-primary-500 hover:from-primary-700 hover:to-primary-600
+            text-white font-semibold shadow-lg hover:shadow-xl hover:scale-105
+            transition-all duration-200 group">
+    <svg class="w-5 h-5 group-hover:rotate-90 transition-transform duration-200"
+         fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+    </svg>
+    Create your first note
+  </a>
+  {% else %}
+  <a href="/"
+     hx-get="/htmx/notes"
+     hx-target="#notes-grid-container"
+     hx-push-url="/"
+     class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium
+            border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300
+            hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
+    ← Back to all notes
+  </a>
+  {% endif %}
+</div>
+{% endif %}
