@@ -42,3 +42,6 @@ node_modules/
 
 # Docker
 docker-compose.override.yml
+
+# Vercel
+.vercel/

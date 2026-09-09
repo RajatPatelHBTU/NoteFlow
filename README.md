@@ -219,6 +219,39 @@ pytest tests/test_pages.py -v
 
 ---
 
+## ⚡ Deploying to Vercel
+
+NoteFlow is configured for serverless deployment on [Vercel](https://vercel.com) using `@vercel/python`.
+
+### Prerequisites
+- A remote MongoDB database (e.g., free cluster on [MongoDB Atlas](https://www.mongodb.com/cloud/atlas)).
+- Make sure your MongoDB Atlas Network Access allows `0.0.0.0/0` (Allow access from anywhere) so Vercel serverless functions can connect.
+
+### Option 1: Deploy via Vercel Dashboard (Recommended)
+1. Push your code to GitHub / GitLab / Bitbucket.
+2. Go to your [Vercel Dashboard](https://vercel.com) and click **"Add New Project"**.
+3. Import your repository.
+4. Expand **Environment Variables** and configure:
+   - `MONGODB_URL`: Your MongoDB Atlas connection string (e.g., `mongodb+srv://<user>:<password>@cluster0...mongodb.net/?retryWrites=true&w=majority`)
+   - `DATABASE_NAME`: `NoteFlow` (or your database name)
+   - `APP_ENV`: `production`
+   - `SECRET_KEY`: A secure random string
+5. Click **Deploy**. Vercel will automatically build the serverless functions and serve your app.
+
+### Option 2: Deploy via Vercel CLI
+```bash
+# Install Vercel CLI globally
+npm i -g vercel
+
+# Deploy to preview
+vercel
+
+# Deploy to production
+vercel --prod
+```
+
+---
+
 ## 📄 License
 
 This project is licensed under the **MIT License** — feel free to use it for personal projects, portfolios, or commercial applications.
@@ -228,3 +261,4 @@ This project is licensed under the **MIT License** — feel free to use it for p
 <div align="center">
   Developed by <a href="https://github.com/RajatPatelHBTU">Rajat Patel</a>
 </div>
+

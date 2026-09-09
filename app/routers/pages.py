@@ -1,5 +1,6 @@
 import json
 import logging
+from pathlib import Path
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request, status
@@ -12,8 +13,9 @@ from app.services.note_service import InvalidNoteIdError, NoteNotFoundError, Not
 
 logger = logging.getLogger(__name__)
 
+BASE_DIR = Path(__file__).resolve().parent.parent
 router = APIRouter(tags=["Pages"])
-templates = Jinja2Templates(directory="app/templates")
+templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
 
 def _toast_headers(message: str, toast_type: str = "success") -> dict:

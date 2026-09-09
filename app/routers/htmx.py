@@ -1,6 +1,7 @@
 """HTMX partial routes — return HTML fragments for dynamic interactions."""
 
 import logging
+from pathlib import Path
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request, status
@@ -13,8 +14,9 @@ from app.services.note_service import InvalidNoteIdError, NoteNotFoundError, Not
 
 logger = logging.getLogger(__name__)
 
+BASE_DIR = Path(__file__).resolve().parent.parent
 router = APIRouter(prefix="/htmx", tags=["HTMX"])
-templates = Jinja2Templates(directory="app/templates")
+templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
 
 def get_note_service(collection=Depends(get_notes_collection)) -> NoteService:
