@@ -51,7 +51,12 @@ templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 async def lifespan(app: FastAPI):
     """Manage startup and shutdown events."""
     logger.info(f"Starting {settings.app_name} ({settings.app_env})")
-    await connect_to_mongo()
+    try:
+        await connect_to_mongo()
+    except Exception as exc:
+        # In serverless environments (Vercel), lifespan may not fire reliably.
+        # The ensure_db_ready_middleware will handle initialization on first request.
+        logger.warning(f"Lifespan DB connect skipped (serverless?): {exc}")
     yield
     await close_mongo_connection()
     logger.info(f"{settings.app_name} shut down.")
@@ -78,9 +83,46 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ── Static Files ──────────────────────────────────────────────────────────────
+# ── Serverless Index Initialization Middleware ──────────────────────────────
+_indexes_initialized: bool = False
 
-app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
+
+@app.middleware("http")
+async def ensure_db_ready_middleware(request: Request, call_next):
+    """Ensure database connection and indexes exist on first request in serverless environments where lifespan does not fire."""
+    global _indexes_initialized
+    if not _indexes_initialized:
+        try:
+            from app.database import get_client, create_indexes
+            get_client()  # Ensure Motor client is initialized
+            await create_indexes()
+            _indexes_initialized = True
+        except Exception as exc:
+            logger.warning(f"Serverless index check: {exc}")
+    return await call_next(request)
+
+
+# ── Static Files ──────────────────────────────────────────────────────────────
+# On Vercel, static assets are served via the CDN (@vercel/static in vercel.json).
+# Only mount StaticFiles when running locally (directory exists in expected location).
+
+_static_dir = BASE_DIR / "static"
+if _static_dir.is_dir():
+    app.mount("/static", StaticFiles(directory=str(_static_dir)), name="static")
+
+
+# ── Health Endpoint ───────────────────────────────────────────────────────────
+
+@app.get("/health", tags=["Health"], summary="Health Check")
+async def health_check():
+    """Health check endpoint for Vercel / uptime monitoring."""
+    return {
+        "status": "healthy",
+        "app": settings.app_name,
+        "version": settings.app_version,
+        "environment": settings.app_env,
+    }
+
 
 # ── Routers ───────────────────────────────────────────────────────────────────
 

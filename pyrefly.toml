@@ -1,0 +1,4 @@
+# Pyrefly Configuration for NoteFlow
+site-package-path = [
+  "venv/Lib/site-packages",
+]

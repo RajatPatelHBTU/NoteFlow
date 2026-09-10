@@ -12,42 +12,73 @@ logger = logging.getLogger(__name__)
 
 _client: Optional[motor.motor_asyncio.AsyncIOMotorClient] = None
 _db: Optional[motor.motor_asyncio.AsyncIOMotorDatabase] = None
+_client_loop = None
 _indexes_created: bool = False
+
+
+def _get_current_loop():
+    import asyncio
+    try:
+        return asyncio.get_running_loop()
+    except RuntimeError:
+        return None
+
+
+def get_client() -> motor.motor_asyncio.AsyncIOMotorClient:
+    """Get or create the Motor client, ensuring it is attached to the current event loop."""
+    global _client, _db, _client_loop
+    current_loop = _get_current_loop()
+
+    # If client is missing, or event loop has changed / closed (serverless warm container reuse)
+    if (
+        _client is None
+        or _client_loop is None
+        or (_client_loop is not None and current_loop is not None and _client_loop is not current_loop)
+        or (_client_loop is not None and _client_loop.is_closed())
+    ):
+        if _client is not None:
+            try:
+                _client.close()
+            except Exception:
+                pass
+        settings = get_settings()
+        _client = motor.motor_asyncio.AsyncIOMotorClient(
+            settings.mongodb_url,
+            serverSelectionTimeoutMS=5000,
+            connectTimeoutMS=5000,
+            socketTimeoutMS=10000,
+            maxPoolSize=10,
+        )
+        _client_loop = current_loop
+        _db = _client[settings.database_name]
+        logger.info("Initialized MongoDB client (serverless-compatible).")
+
+    return _client
 
 
 async def connect_to_mongo() -> None:
     """Create Motor client and connect to MongoDB."""
-    global _client, _db
-    if _client is None:
-        settings = get_settings()
-        _client = motor.motor_asyncio.AsyncIOMotorClient(settings.mongodb_url)
-        _db = _client[settings.database_name]
-        logger.info(f"Connected to MongoDB: {settings.mongodb_url}/{settings.database_name}")
+    get_client()
     await create_indexes()
 
 
 async def close_mongo_connection() -> None:
     """Close the Motor client connection."""
-    global _client, _db
+    global _client, _db, _client_loop
     if _client:
         _client.close()
         _client = None
         _db = None
+        _client_loop = None
         logger.info("MongoDB connection closed.")
 
 
 def get_database() -> motor.motor_asyncio.AsyncIOMotorDatabase:
     """Return the active database instance (dependency injection).
 
-    If connect_to_mongo was not invoked by lifespan (e.g. in certain serverless environments),
-    lazily initialize the Motor client.
+    Lazily initializes the Motor client if needed and guarantees connection to current loop.
     """
-    global _client, _db
-    if _db is None:
-        settings = get_settings()
-        _client = motor.motor_asyncio.AsyncIOMotorClient(settings.mongodb_url)
-        _db = _client[settings.database_name]
-        logger.info("Lazily initialized MongoDB client for serverless environment.")
+    get_client()
     return _db
 
 
