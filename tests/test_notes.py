@@ -4,7 +4,6 @@ Covers: CRUD, pin, search, filter, sorting, validation, invalid ID, missing note
 """
 
 import pytest
-import pytest_asyncio
 from httpx import AsyncClient
 
 from tests.conftest import SAMPLE_NOTE, SAMPLE_NOTE_PINNED

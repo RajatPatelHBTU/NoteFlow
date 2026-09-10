@@ -2,7 +2,6 @@
 
 import logging
 import math
-from typing import Optional
 
 import motor.motor_asyncio
 

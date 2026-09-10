@@ -6,7 +6,7 @@ from typing import Any, Optional
 
 from bson import ObjectId
 from bson.errors import InvalidId
-from pymongo import ASCENDING, DESCENDING
+from pymongo import ASCENDING, DESCENDING, ReturnDocument
 
 import motor.motor_asyncio
 
@@ -149,7 +149,7 @@ class NoteRepository:
         result = await self.collection.find_one_and_update(
             {"_id": oid},
             {"$set": update_fields},
-            return_document=True,
+            return_document=ReturnDocument.AFTER,
         )
         return _doc_to_dict(result) if result else None
 
@@ -164,7 +164,7 @@ class NoteRepository:
         result = await self.collection.find_one_and_update(
             {"_id": oid},
             {"$set": {"is_pinned": new_pin_state, "updated_at": datetime.now(timezone.utc)}},
-            return_document=True,
+            return_document=ReturnDocument.AFTER,
         )
         return _doc_to_dict(result) if result else None
 
